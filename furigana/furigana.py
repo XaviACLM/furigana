@@ -1,77 +1,47 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import sys
 import MeCab
 import re
 import jaconv
-import unicodedata
+import regex as re
 
 
-def is_kanji(ch):
-    return 'CJK UNIFIED IDEOGRAPH' in unicodedata.name(ch)
+hiragana_matcher = re.compile(r'([\p{IsHira}])', re.UNICODE)
+kanji_matcher = re.compile(r'([\p{IsHan}])', re.UNICODE)
+kanji_seq_matcher = re.compile(r'([\p{IsHan}]+)', re.UNICODE)
 
 
 def is_hiragana(ch):
-    return 'HIRAGANA' in unicodedata.name(ch)
+    return re.fullmatch(hiragana_matcher,ch) is not None
 
 
-def split_okurigana_reverse(text, hiragana):
-    """ 
-      tested:
-        お茶(おちゃ)
-        ご無沙汰(ごぶさた)
-        お子(こ)さん
-    """
-    yield (text[0],)
-    yield from split_okurigana(text[1:], hiragana[1:])
+def is_kanji(ch):
+    return re.fullmatch(kanji_matcher,ch) is not None
 
 
 def split_okurigana(text, hiragana):
-    """ 送り仮名 processing
-      tested: 
-         * 出会(であ)う
-         * 明(あか)るい
-         * 駆(か)け抜(ぬ)け
-    """
-    if is_hiragana(text[0]):
-        yield from split_okurigana_reverse(text, hiragana)
-    if all(is_kanji(_) for _ in text):
-        yield text, hiragana
-        return
-    text = list(text)
-    ret = (text[0], [hiragana[0]])
-    for hira in hiragana[1:]:
-        for char in text:
-            if hira == char:
-                text.pop(0)
-                if ret[0]:
-                    if is_kanji(ret[0]):
-                        yield ret[0], ''.join(ret[1][:-1])
-                        yield (ret[1][-1],)
-                    else:
-                        yield (ret[0],)
-                else:
-                    yield (hira,)
-                ret = ('', [])
-                if text and text[0] == hira:
-                    text.pop(0)
-                break
-            else:
-                if is_kanji(char):
-                    if ret[1] and hira == ret[1][-1]:
-                        text.pop(0)
-                        yield ret[0], ''.join(ret[1][:-1])
-                        yield char, hira
-                        ret = ('', [])
-                        text.pop(0)
-                    else:
-                        ret = (char, ret[1]+[hira])
-                else:
-                    # char is also hiragana
-                    if hira != char:
-                        break
-                    else:
-                        break
+    
+    #the choice of matching group syntax here is somewhat arbitrary
+    #hopefully japanese vocabulary should be regular enough that this will never be ambiguous?
+    matcher = re.sub(kanji_matcher,"(.*)",text)
+    
+    furigana = re.fullmatch(matcher,hiragana).groups()
+    kanji_split = re.split(kanji_seq_matcher,text)
+    
+    n_splits = len(kanji_split)
+    n_kanji = n_splits//2
+    for i in range(n_kanji):
+        kanji_split[1+2*i] = (kanji_split[1+2*i], furigana[i])
+    for i in range(2,n_splits-1,2):
+        kanji_split[i] = (kanji_split[i],)
+        
+    for limit_index in (0,-1):
+        if kanji_split[limit_index] == '':
+            kanji_split.pop(limit_index)
+        else:
+            kanji_split[limit_index] = (kanji_split[limit_index],)
+        
+    return kanji_split
 
 
 def split_furigana(text):
@@ -83,7 +53,9 @@ def split_furigana(text):
     It seems like MeCab has bug in releasing resource
     """
     mecab = MeCab.Tagger("-Ochasen")
-    mecab.parse('') # 空でパースする必要がある
+    #i dont think this is necessary?
+    #seems like a remnant of wanting to have the node.next instruction at the start of the loop
+    #mecab.parse('') # 空でパースする必要がある
     node = mecab.parseToNode(text)
     ret = []
 
@@ -94,43 +66,47 @@ def split_furigana(text):
             continue
 
         # originが空のとき、漢字以外の時はふりがなを振る必要がないのでそのまま出力する
-        if origin != "" and any(is_kanji(_) for _ in origin):
-            #sometimes MeCab can't give kanji reading, and make node-feature have less than 7 when splitted.
-            #bypass it and give kanji as isto avoid IndexError
-            if len(node.feature.split(",")) > 7:
-                kana = node.feature.split(",")[7] # 読み仮名を代入
-            else:
-                kana = node.surface
+        if any(is_kanji(_) for _ in origin):
+            #main repo returns surface if this fails - this is dubious
+            kana = node.feature.split(",")[7] # 読み仮名を代入
             hiragana = jaconv.kata2hira(kana)
-            for pair in split_okurigana(origin, hiragana):
-                ret += [pair]
+            ret.extend(split_okurigana(origin, hiragana))
         else:
-            if origin:
-                ret += [(origin,)]
+            ret.append((origin,))
         node = node.next
     return ret
 
+def furigana_html(text, furigana_size=None):
+    style_text = f' style=\"font-size: {furigana_size}rem;\"' if furigana_size is not None else ''
+    result = []
+    for item in split_furigana(text):
+        match item:
+            case (kanji, hiragana):
+                result.append(f"<ruby><rb>{kanji}</rb><rt{style_text}>{hiragana}</rt></ruby>")
+            case (hiragana,):
+                result.append(hiragana)
+    return "".join(result)
+    
 
 def print_html(text):
-    for pair in split_furigana(text):
-        if len(pair)==2:
-            kanji,hira = pair
-            print("<ruby><rb>{0}</rb><rt>{1}</rt></ruby>".
-                    format(kanji, hira), end='')
-        else:
-            print(pair[0], end='')
-    print('')
+    print(furigana_html(text))
 
+def run_tests():
+    input_output_pairs = [(('出会う','であう'),[('出会', 'であ'), ('う',)]),
+                          (('明るい','あかるい'),[('明', 'あか'), ('るい',)]),
+                          (('駆け抜け','かけぬけ'),[('駆', 'か'), ('け',), ('抜', 'ぬ'), ('け',)]),
+                          (('聞きました','ききました'),[('聞', 'き'), ('きました',)]),
+                          (('取り締まり','とりしまり'),[('取', 'と'), ('り',), ('締', 'し'), ('まり',)]),
+                          (('お菓子','おかし'),[('お',), ('菓子', 'かし')]),
 
-def print_plaintext(text):
-    for pair in split_furigana(text):
-        if len(pair)==2:
-            kanji,hira = pair
-            print("%s(%s)" % (kanja,hira), end='')
-        else:
-            print(pair[0], end='')
-    print('')
-
+                          #not a word. this is ambiguous! result depends on implementation details
+                          #(('菓お菓','おおおお'),[]), 
+                          ]
+    print("testing split_okurigana")
+    for input_, expected_output in input_output_pairs:
+        actual_output = list(split_okurigana(*input_))
+        print(f'{input_} -> {actual_output} ( ?= {expected_output} )')
+        assert actual_output == expected_output
 
 def main():
     text = sys.argv[1]
@@ -138,5 +114,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if 'idlelib.run' in sys.modules:
+        run_tests()
+    else:
+        main()
 
