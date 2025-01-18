@@ -1,13 +1,15 @@
-My fork of the automatic furigana superscripter. Minor differences:
+My fork of the automatic furigana superscripter, primarily existing to fix some bugs in split_okurigana. Install as a package with `py -m pip install git+https://github.com/XaviACLM/furigana`, use as `import furigana`. Minor differences:
 
 is_kanji and is_hiragana return False instead of error if you pass more than one character
 print_html now depends on another function, furigana_html, which returns a string - and moreover takes an optional parameter specifying the size of the furigana in rem
 
 More importantly split_okurigana was entirely rewritten to fix some bugs. I think this is the only fork that uses regex? I haven't checked them all, but is probably more robust than the naïve approach. Importantly, it matches runs of consecutive kanji to their furigana, as opposed to guessing which kanji in the run corresponds to which kana. It's definitely possible to make it so that it **correctly** matches each kanji to its furigana, but this would require using the morphological analyzer (mecab or whichever you like) repeatedly within split_okurigana, which I cannot be bothered to do.
 
+I also note that the original repository accepted a merge that makes it so that the main parsing loop (that of split_furigana) automatically returns a word with no reading if `node.feature.split(",")[7]` throws an index-out-of-bounds exception - I don't think this is advisable, since this mostly indicates that there is some issue in what is being passed that ought to be looked at - e.g. mispellings ('意昧' instead of '意味') or [ghost characters](https://en.wikipedia.org/wiki/Ghost_characters). It will also complain about more inoffensive things like kyujitai kanji (e.g. mecab fails if you use '鷗' instead of '鴎') or stuff that's out of whatever dictionary you're using, but in most applications it's best to be aware of that and fix it/catch the exception from the main application if necessary.
+
 This is part of a project to add furigana to the anki deck for the dictionary of japanese grammar.
 
-I leave the original readme below
+I leave the original readme below:
 
 # furigana
 Generate furigana(振り仮名) from Japanese
