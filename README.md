@@ -7,6 +7,8 @@ More importantly split_okurigana was entirely rewritten to fix some bugs. I thin
 
 I also note that the original repository accepted a merge that makes it so that the main parsing loop (that of split_furigana) automatically returns a word with no reading if `node.feature.split(",")[7]` throws an index-out-of-bounds exception - I don't think this is advisable, since this mostly indicates that there is some issue in what is being passed that ought to be looked at - e.g. mispellings ('意昧' instead of '意味') or [ghost characters](https://en.wikipedia.org/wiki/Ghost_characters). It will also complain about more inoffensive things like kyujitai kanji (e.g. mecab fails if you use '鷗' instead of '鴎') or stuff that's out of whatever dictionary you're using, but in most applications it's best to be aware of that and fix it/catch the exception from the main application if necessary.
 
+A noteworthy instance of this is that the program will get confused when ヶ is used as an abbreviation of 箇 - I'm so-so on this but chose not to handle it specifically, because it would be rather awkward to put furigana on top of ヶ. For whatever application you're using this it's probably better to replace ヶ by 箇 where adequate in the material.
+
 This is part of a project to add furigana to the anki deck for the dictionary of japanese grammar.
 
 I leave the original readme below:
