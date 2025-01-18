@@ -23,7 +23,7 @@ def split_okurigana(text, hiragana):
     
     #the choice of matching group syntax here is somewhat arbitrary
     #hopefully japanese vocabulary should be regular enough that this will never be ambiguous?
-    matcher = re.sub(kanji_matcher,"(.*)",text)
+    matcher = re.sub(kanji_matcher,"(.*)",jaconv.kata2hira(text))
     
     furigana = re.fullmatch(matcher,hiragana).groups()
     kanji_split = re.split(kanji_seq_matcher,text)
@@ -64,7 +64,6 @@ def split_furigana(text):
         if not origin:
             node = node.next
             continue
-
         # originが空のとき、漢字以外の時はふりがなを振る必要がないのでそのまま出力する
         if any(is_kanji(_) for _ in origin):
             #main repo returns surface if this fails - this is dubious
@@ -75,6 +74,7 @@ def split_furigana(text):
             ret.append((origin,))
         node = node.next
     return ret
+
 
 def furigana_html(text, furigana_size=None):
     style_text = f' style=\"font-size: {furigana_size}rem;\"' if furigana_size is not None else ''
@@ -91,6 +91,7 @@ def furigana_html(text, furigana_size=None):
 def print_html(text):
     print(furigana_html(text))
 
+
 def run_tests():
     input_output_pairs = [(('出会う','であう'),[('出会', 'であ'), ('う',)]),
                           (('明るい','あかるい'),[('明', 'あか'), ('るい',)]),
@@ -98,6 +99,7 @@ def run_tests():
                           (('聞きました','ききました'),[('聞', 'き'), ('きました',)]),
                           (('取り締まり','とりしまり'),[('取', 'と'), ('り',), ('締', 'し'), ('まり',)]),
                           (('お菓子','おかし'),[('お',), ('菓子', 'かし')]),
+                          (('エッフェル塔','えっふぇるとう'),[('エッフェル',), ('塔', 'とう')]),
 
                           #not a word. this is ambiguous! result depends on implementation details
                           #(('菓お菓','おおおお'),[]), 
@@ -107,6 +109,7 @@ def run_tests():
         actual_output = list(split_okurigana(*input_))
         print(f'{input_} -> {actual_output} ( ?= {expected_output} )')
         assert actual_output == expected_output
+
 
 def main():
     text = sys.argv[1]
