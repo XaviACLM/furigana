@@ -1,3 +1,14 @@
+My fork of the automatic furigana superscripter. Minor differences:
+
+is_kanji and is_hiragana return False instead of error if you pass more than one character
+print_html now depends on another function, furigana_html, which returns a string - and moreover takes an optional parameter specifying the size of the furigana in rem
+
+More importantly split_okurigana was entirely rewritten to fix some bugs. I think this is the only fork that uses regex? I haven't checked them all, but is probably more robust than the naïve approach. Importantly, it matches runs of consecutive kanji to their furigana, as opposed to guessing which kanji in the run corresponds to which kana. It's definitely possible to make it so that it **correctly** matches each kanji to its furigana, but this would require using the morphological analyzer (mecab or whichever you like) repeatedly within split_okurigana, which I cannot be bothered to do.
+
+This is part of a project to add furigana to the anki deck for the dictionary of japanese grammar.
+
+I leave the original readme below
+
 # furigana
 Generate furigana(振り仮名) from Japanese
 
