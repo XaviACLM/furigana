@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,5 +10,5 @@ authors = [
     { name="Xavi A", email="xavi.aclm@gmail.com" }
 ]
 dependencies = [
-    "jaconv>=0.4.0",
+    "jaconv",
 ]
