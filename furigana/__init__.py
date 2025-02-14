@@ -1,13 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+from .furigana import add_furigana_plaintext, add_furigana_html
 
-import sys
-import furigana
-
-def main():
-    for pair in furigana.furigana(sys.argv[1]):
-        if len(pair)==2:
-            kanji, hira = pair
-            print('%s(%s)' % (kanji, hira))
-        else:
-            print(pair[0])
+# in case client code wants its own formatting logic
+from .furigana import split_furigana, repr_with_formatting, KanjiWithFurigana, TextWithFurigana
