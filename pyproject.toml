@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "furigana"
+version = "1,0.0"
+description = "Add furigana to japanese text"
+authors = [
+    { name="Xavi A", email="xavi.aclm@gmail.com" }
+]
+dependencies = [
+    "jaconv>=0.4.0",
+]
