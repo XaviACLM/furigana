@@ -82,7 +82,15 @@ def _split_okurigana(text: str, hiragana: str) -> TextWithFurigana:
     """
     # the choice of matching group syntax here is somewhat arbitrary
     # japanese vocabulary should be regular enough that this will never be ambiguous
-    matcher = re.sub(kanji_matcher, "(.*)", jaconv.kata2hira(text))
+    matcher = re.sub(kanji_seq_matcher, "(.*)", jaconv.kata2hira(text))
+
+    # handling polyphonic morae
+    # i don't believe you can actually read づ as ず in any context, but it sometimes appears that way in the dict's readings
+    # i assume it must be some sort of colloquialism
+    furigana_matcher = re.sub("は", "[はわ]", furigana_matcher)
+    furigana_matcher = re.sub("を", "[おを]", furigana_matcher)
+    furigana_matcher = re.sub("[ーう]", "[ーう]", furigana_matcher)
+    furigana_matcher = re.sub("[づず]", "[づず]", furigana_matcher)
 
     furigana = re.fullmatch(matcher, hiragana).groups()
     kanji_split = re.split(kanji_seq_matcher, text)
